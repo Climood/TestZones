@@ -1,0 +1,4 @@
+You also can use authentication when accessing LDAP catalog:
+
+      curl -u user:passwd "ldap://ldap.frontec.se/o=frontec??sub?mail=*"
+      curl "ldap://user:passwd@ldap.frontec.se/o=frontec??sub?mail=*"

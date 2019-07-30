@@ -1,0 +1,36 @@
+uid используется как логин
+
+cn: Ben Alex
+sn: Alex
+uid: ben
+userPassword: benspassword
+
+cn: Bob Hamilton
+sn: Hamilton
+uid: bob
+userPassword: bobspassword
+
+cn: Joe Smeth
+sn: Smeth
+uid: joe
+userPassword: joespassword
+
+cn: Mouse, Jerry
+sn: Mouse
+uid: jerry
+userPassword: jerryspassword
+
+cn: slash/guy
+sn: Slash
+uid: slashguy
+userPassword: slashguyspassword
+
+cn: quote\"guy
+sn: Quote
+uid: quoteguy
+userPassword: quoteguyspassword
+
+cn: Space Cadet
+sn: Cadet
+uid: space cadet
+userPassword: spacecadetspassword

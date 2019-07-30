@@ -1,0 +1,219 @@
+Тестирование приложения
+
+Теперь, когда приложение запущено, вы можете протестировать его.
+ Вы можете использовать любой REST клиент, какой захотите. Пример, показанный ниже, использует *nix инструмент curl.
+
+Сначала посмотрим на сервис верхнего уровня:
+
+$ curl http://localhost:8080
+{
+  "_links" : {
+    "people" : {
+      "href" : "http://localhost:8080/user{?page,size,sort}",
+      "templated" : true
+    }
+  }
+}
+
+Здесь вы получите первое представление о том, что сервер может предложить.
+Ссылка на user указывает на http://localhost:8080/user. Она включает несколько вариантов, таких как ?page, ?size и ?sort.
+Spring Data REST использует HAL формат для вывода JSON.
+Он гибок и предлагает удобный способ для предоставления ссылок, связанных с данными, которые необходимо получить.
+
+$ curl http://localhost:8080/user
+{
+  "_links" : {
+    "self" : {
+      "href" : "http://localhost:8080/user{?page,size,sort}",
+      "templated" : true
+    },
+    "search" : {
+      "href" : "http://localhost:8080/user/search"
+    }
+  },
+  "page" : {
+    "size" : 20,
+    "totalElements" : 0,
+    "totalPages" : 0,
+    "number" : 0
+  }
+}
+
+Заметка(структура User)
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+    private String firstName;
+    private String lastName;
+    private String birthday;
+    private String email;
+    private String password;
+
+
+Есть также и без элементов, соответственно и без страниц. Время создавать нового user!
+
+$ curl -i -X POST -H "Content-Type:application/json" -d '{  "firstName" : "Frodo",  "lastName" : "Baggins" ,"birthday" : "1/1/1","email" : "shire@hobbit.com","password" : "666" : }' http://localhost:8080/people
+HTTP/1.1 201 Created
+Server: Apache-Coyote/1.1
+Location: http://localhost:8080/user/1
+Content-Length: 0
+Date: Wed, 26 Feb 2014 20:26:55 GMT
+
+    -i гарантирует вам отображение сообщения ответа, включая заголовки. URI новосозданного user показан
+    -X POST указывает на использование POST для создания новой записи
+    -H "Content-Type:application/json" устанавливает тип содержимого, поэтому приложение знает о содержании JSON объекта
+    -d '{  "firstName" : "Frodo",  "lastName" : "Baggins" ,"birthday" : "1/1/1","email" : "shire@hobbit.com","password" : "666" : }'
+     отправляемые данные
+
+Обратите внимание, как предыдущая POST операция включает заголовок Location. Он содержит URI новосозданного ресурса.
+ Spring Data REST также имеет два метода RepositoryRestConfiguration.setReturnBodyOnCreate(…)
+ и setReturnBodyOnCreate(…), которыми вы можете настраивать фреймворк для немедленного возврата
+  представления только что созданного ресурса.
+
+Вы можете снова запросить всех людей:
+
+$ curl http://localhost:8080/user
+{
+  "_links" : {
+    "self" : {
+      "href" : "http://localhost:8080/user{?page,size,sort}",
+      "templated" : true
+    },
+    "search" : {
+      "href" : "http://localhost:8080/user/search"
+    }
+  },
+  "_embedded" : {
+    "persons" : [ {
+      "firstName" : "Frodo",
+      "lastName" : "Baggins",
+      "_links" : {
+        "self" : {
+          "href" : "http://localhost:8080/user/1"
+        }
+      }
+    } ]
+  },
+  "page" : {
+    "size" : 20,
+    "totalElements" : 1,
+    "totalPages" : 1,
+    "number" : 0
+  }
+}
+
+Объект users содержит список с Frodo. Обратите внимание, как он включает в себя ссылку self.
+Spring Data REST также использует Evo Inflector для использования имени в группировках.
+
+Вы можете запросить напрямую конкретную запись:
+
+$ curl http://localhost:8080/user/1
+{
+  "firstName" : "Frodo",
+  "lastName" : "Baggins",
+  "_links" : {
+    "self" : {
+      "href" : "http://localhost:8080/user/1"
+    }
+  }
+}
+
+Это может показаться чисто веб-интерфейсом, но за сценой реляционная БД Н2.
+ В рабочей системе, вы возможно используете настоящую, например PostgreSQL.
+
+В этом уроке рассматривается только один доменный объект.
+В более сложной системе, где доменные объекты связаны друг с другом,
+Spring Data REST отображает дополнительные ссылки, помогая переходить к связанным записям.
+
+Нахождение всех ппользовательских запросов:
+
+$ curl http://localhost:8080/user/search
+{
+  "_links" : {
+    "findByLastName" : {
+      "href" : "http://localhost:8080/user/search/findByLastName{?lastName}",
+      "templated" : true
+    }
+  }
+}
+
+Вы можете увидеть URL для запроса, включающего параметр HTTP запроса name.
+ Если обратите внимание, то он соответствует аннотации @Param("lastName"), встроенной в интерфейс.
+
+Чтобы использовать запрос findByLastName, сделайте следующее:
+
+$ curl http://localhost:8080/user/search/findByLastName?lastName=Baggins
+{
+  "_embedded" : {
+    "persons" : [ {
+      "firstName" : "Frodo",
+      "lastName" : "Baggins",
+      "_links" : {
+        "self" : {
+          "href" : "http://localhost:8080/user/1"
+        }
+      }
+    } ]
+  }
+}
+
+Т.к. вы описали возвращать List<User> в коде, то он вернет все результаты.
+ Если бы вы описали возвращать только User, то он бы выбрал и вернул один их User объектов.
+ Поскольку это может быть непредсказуемым, вы скорее всего не захотите это делать для запросов, возвращающих несколько записей.
+
+Вы можете также использовать PUT, PATCH или DELETE REST вызовы для замены, обновления или удаления существующих записей:
+
+$ curl -X PUT -H "Content-Type:application/json" -d '{  "firstName" : "Bilbo",  "lastName" : "Baggins" ,"birthday" : "11/11/0","email" : "majorShire@hobbit.com","password" : "777" : }' http://localhost:8080/user/1
+$ curl http://localhost:8080/user/1
+{
+  "firstName" : "Bilbo",
+  "lastName" : "Baggins",
+  "_links" : {
+    "self" : {
+      "href" : "http://localhost:8080/user/1"
+    }
+  }
+}
+
+$ curl -X PATCH -H "Content-Type:application/json" -d '{ "firstName": "Bilbo Jr." }' http://localhost:8080/user/1
+$ curl http://localhost:8080/user/1
+{
+  "firstName" : "Bilbo Jr.",
+  "lastName" : "Baggins",
+  "_links" : {
+    "self" : {
+      "href" : "http://localhost:8080/user/1"
+    }
+  }
+}
+
+PUT заменяет всю запись. Отсутствующие поля будут заменены на null.
+ PATCH может быть использован для обновления конкретных элементов.
+
+Вы можете удалить записи:
+
+$ curl -X DELETE http://localhost:8080/user/1
+$ curl http://localhost:8080/user
+{
+  "_links" : {
+    "self" : {
+      "href" : "http://localhost:8080/user{?page,size,sort}",
+      "templated" : true
+    },
+    "search" : {
+      "href" : "http://localhost:8080/user/search"
+    }
+  },
+  "page" : {
+    "size" : 20,
+    "totalElements" : 0,
+    "totalPages" : 0,
+    "number" : 0
+  }
+}
+
+Очень удобной стороной этого Hypermedia-driven Interface является то, как вы можете обнаруживать все RESTful точки выхода,
+используя curl(либо любой другой REST клиент).
+При этом нет необходимости в обмене официальным договором или документом интерфейса с вашими клиентами.
